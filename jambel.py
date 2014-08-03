@@ -7,6 +7,7 @@ import re
 __all__ = ['Jambel']
 
 import telnetlib
+import re
 
 
 OFF = 0
@@ -123,14 +124,19 @@ class Jambel(object):
     def set_blink_time(self, module, on_time, off_time):
         self._send('blink_time=%i,%i,%i' % (module, on_time, off_time))
 
+    _status_reg = re.compile(r'^status=(\d+(?:,\d+)*)')
+
     def status(self):
         result = self._send('status')
-        # re.compile(r'^status=(\d+)(?:,(\d+))*')
-        # return map(int, result.split(','))
-        return result
+        try:
+            codes = self._status_reg.search(result).group(1)
+            return map(int, codes.split(','))[:3]
+        except (TypeError, ValueError):
+            raise TypeError('Could not parse jambel status %r!' % result)
 
     def set(self, status):
-        self._send('set_all=%s' % ','.join(map(str, status)))
+        codes = map(str, status) + ['0']
+        self._send('set_all=%s' % ','.join(codes))
 
     def test(self):
         return self._send('test')
