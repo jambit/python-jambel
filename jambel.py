@@ -75,7 +75,9 @@ class Jambel(object):
 
     """
 
-    def __init__(self, host, port=10001):
+    DEFAULT_PORT = 10001
+
+    def __init__(self, host, port=DEFAULT_PORT):
         self._conn = telnetlib.Telnet(host, port)
         self.green = LightModule(self, 1)
         self.yellow = LightModule(self, 2)
