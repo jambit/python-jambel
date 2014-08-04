@@ -2,7 +2,7 @@
 import telnetlib
 import pytest
 
-from jambel import Jambel, PANIC
+import jambel as _jambel
 
 
 class TelnetMock(object):
@@ -29,16 +29,16 @@ def mock_telnet(monkeypatch):
 
 @pytest.fixture(scope='function')
 def jambel(request):
-    return Jambel('my.host')
+    return _jambel.Jambel('my.host')
 
 
 def test_init_jambel(jambel):
     assert jambel._conn.host == 'my.host'
-    assert jambel._conn.port == Jambel.DEFAULT_PORT
+    assert jambel._conn.port == jambel.DEFAULT_PORT
 
 
 def test_init_jambel_with_custom_port():
-    jambel = Jambel('my.host', 8000)
+    jambel = _jambel.Jambel('my.host', 8000)
     assert jambel._conn.host == 'my.host'
     assert jambel._conn.port == 8000
 
@@ -49,5 +49,15 @@ def test_status(jambel):
 
 
 def test_set(jambel):
-    jambel.set(PANIC)
+    jambel.set(_jambel.PANIC)
     assert jambel._conn._last_cmd == 'set_all=3,3,3,0\n'
+
+
+def test_init_jambel_modules_bottom_up():
+    jambel = _jambel.Jambel('my.host', green=_jambel.BOTTOM)
+    assert jambel.green._no == 1
+
+def test_init_jambel_modules_top_down():
+    jambel = _jambel.Jambel('my.host', green=_jambel.TOP)
+    assert jambel.green._no == 3
+

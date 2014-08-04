@@ -2,9 +2,6 @@
 """
 Sebastian Rahlf <sebastian.rahlf@jambit.com>
 """
-import re
-
-__all__ = ['Jambel']
 
 import telnetlib
 import re
@@ -15,6 +12,9 @@ ON = 1
 BLINK = 2
 FLASH = 3
 BLINK_INVERSE = 4
+
+TOP = 'top'
+BOTTOM = 'bottom'
 
 ALL_OFF = [OFF, OFF, OFF]
 PANIC = [FLASH, FLASH, FLASH]
@@ -34,6 +34,9 @@ class LightModule(object):
         self._jambel = jambel
         self._no = no
 
+    def __repr__(self):
+        return '<%s module=%d>' % (self.__class__.__name__, self._no)
+
     def on(self, time=None):
         """
         :param time: on time (in ms)
@@ -50,7 +53,7 @@ class LightModule(object):
         self._jambel._flash(self._no)
 
     def status(self):
-        return self._jambel.status()[self._no]
+        return self._jambel.status(raw=True)[self._no]
 
     def blink_time(self, on, off):
         """
@@ -65,6 +68,7 @@ class Jambel(object):
     """
     Interface to a jambit traffic light. ::
 
+        >>> from jambel import Jambel, ALL_OFF
         >>> jambel = Jambel('traffic.jambit.com')
         >>> jambel.green.on()
         >>> jambel.yellow.blink()
@@ -73,15 +77,26 @@ class Jambel(object):
         [1, 2, 3]
         >>> jambel.set(ALL_OFF)
 
+    Some lights have the green light module at the top. For those you need to instantiate the Jambel object using ::
+
+        >>> from jambel import TOP
+        >>> jambel = Jambel('traffic.jambit.com', green=TOP)
+        >>> jambel.green.on()
+
     """
 
     DEFAULT_PORT = 10001
 
-    def __init__(self, host, port=DEFAULT_PORT):
+    def __init__(self, host, port=DEFAULT_PORT, green=BOTTOM):
+        """
+        :param host: Jambel host name/IP address
+        :param port: Jambel port number
+        :param green: ``BOTTOM`` if green module is at the bottom, ``TOP`` otherwise
+        """
         self._conn = telnetlib.Telnet(host, port)
-        self.green = LightModule(self, 1)
-        self.yellow = LightModule(self, 2)
-        self.red = LightModule(self, 3)
+        self._green_first = green == BOTTOM
+        order = range(1, 4) if self._green_first else range(3, 0, -1)
+        self.green, self.yellow, self.red = [LightModule(self, no) for no in order]
 
     def __del__(self):
         if hasattr(self, '_conn'):
@@ -93,15 +108,23 @@ class Jambel(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         print exc_type, exc_val, exc_tb
 
+    def __repr__(self):
+        return '<%s at %s:%s>' % (self.__class__.__name__, self._conn.host, self._conn.port)
+
     def _send(self, cmd):
+        """
+        Sends a single command to the Jambel.
+        :type cmd: string
+        :return: Jambel's response
+        """
         self._conn.write('%s\n' % cmd)
         return self._conn.read_until('\n')
 
-    def _on(self, module, time=None):
-        if time:
-            if time > 65000:
-                raise ValueError('Max value 65000 ms!')
-            self._send('set=%i,%i' % (module, time))
+    def _on(self, module, duration=None):
+        if duration:
+            if duration > 65000:
+                raise ValueError('Max duration 65000 ms!')
+            self._send('set=%i,%i' % (module, duration))
         else:
             self._send('set=%i,on' % module)
 
@@ -117,28 +140,60 @@ class Jambel(object):
     def reset(self):
         self._send('reset')
 
-    def set_blink_time_on(self, time):
-        self._send('blink_time_on=%i' % time)
+    def set_blink_time_on(self, duration):
+        self._send('blink_time_on=%i' % duration)
 
-    def set_blink_time_off(self, time):
-        self._send('blink_time_off=%i' % time)
+    def set_blink_time_off(self, duration):
+        self._send('blink_time_off=%i' % duration)
 
     def set_blink_time(self, module, on_time, off_time):
         self._send('blink_time=%i,%i,%i' % (module, on_time, off_time))
 
     _status_reg = re.compile(r'^status=(\d+(?:,\d+)*)')
 
-    def status(self):
+    def status(self, raw=False):
+        """
+        Will return a list of status codes for the light modules. ::
+
+            >>> jambel = Jambel('ampel5.dev.jambit.com')
+            >>> green, yellow, red = jambel.status()
+            >>> if green == BLINK:
+            ...     print 'green light is blinking!'
+
+        Status code are:
+
+        * OFF
+        * ON
+        * BLINK
+        * FLASH
+        * BLINK_INVERSE
+
+        If you want to see which module has which status without mapping it to position of the individualcolours,
+        use ``raw=True``.
+
+        :param raw: returns list of status codes as it comes from the Jambel, i.e. without ordering by light colour
+        :return: list of status codes for each light module ([green, yellow, red])
+        """
         result = self._send('status')
         try:
-            codes = self._status_reg.search(result).group(1)
-            return map(int, codes.split(','))[:3]
+            values = self._status_reg.search(result).group(1)
+            codes = map(int, values.split(','))[:3]
+            if not raw and not self._green_first:
+                codes.reverse()
+            return codes
         except (TypeError, ValueError):
             raise TypeError('Could not parse jambel status %r!' % result)
 
     def set(self, status):
-        codes = map(str, status) + ['0']
-        self._send('set_all=%s' % ','.join(codes))
+        """
+        Sets status for all light modules. See :meth:`status` for available status flags.
+
+        :param status: list status codes for each light module ([green, yellow, red])
+        """
+        codes = map(str, status)
+        if not self._green_first:
+            codes.reverse()
+        self._send('set_all=%s' % ','.join(codes + ['0']))
 
     def test(self):
         return self._send('test')
