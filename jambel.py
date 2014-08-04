@@ -1,5 +1,7 @@
 
 """
+Interface to jambit's project traffic lights.
+
 Sebastian Rahlf <sebastian.rahlf@jambit.com>
 """
 
@@ -37,11 +39,11 @@ class LightModule(object):
     def __repr__(self):
         return '<%s module=%d>' % (self.__class__.__name__, self._no)
 
-    def on(self, time=None):
+    def on(self, duration=None):
         """
-        :param time: on time (in ms)
+        :param duration: on duration (in ms)
         """
-        self._jambel._on(self._no, time)
+        self._jambel._on(self._no, duration)
 
     def off(self):
         self._jambel._off(self._no)
@@ -77,17 +79,17 @@ class Jambel(object):
         [1, 2, 3]
         >>> jambel.set(ALL_OFF)
 
-    Some lights have the green light module at the top. For those you need to instantiate the Jambel object using ::
+    Some lights have the green light module at the bottom. For those you need to instantiate the Jambel object using ::
 
-        >>> from jambel import TOP
-        >>> jambel = Jambel('traffic.jambit.com', green=TOP)
+        >>> from jambel import BOTTOM
+        >>> jambel = Jambel('traffic.jambit.com', green=BOTTOM)
         >>> jambel.green.on()
 
     """
 
     DEFAULT_PORT = 10001
 
-    def __init__(self, host, port=DEFAULT_PORT, green=BOTTOM):
+    def __init__(self, host, port=DEFAULT_PORT, green=TOP):
         """
         :param host: Jambel host name/IP address
         :param port: Jambel port number
