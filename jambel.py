@@ -95,23 +95,20 @@ class Jambel(object):
         :param port: Jambel port number
         :param green: ``BOTTOM`` if green module is at the bottom, ``TOP`` otherwise
         """
-        self._conn = telnetlib.Telnet(host, port)
+        self.host, self.port = host, port
         self._green_first = green == BOTTOM
         order = range(1, 4) if self._green_first else range(3, 0, -1)
         self.green, self.yellow, self.red = [LightModule(self, no) for no in order]
-
-    def __del__(self):
-        if hasattr(self, '_conn'):
-            self._conn.close()
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        print exc_type, exc_val, exc_tb
+        if exc_type is not None:  # an exception has occurred
+            return False          # reraise the exception
 
     def __repr__(self):
-        return '<%s at %s:%s>' % (self.__class__.__name__, self._conn.host, self._conn.port)
+        return '<%s at %s:%s>' % (self.__class__.__name__, self.host, self.port)
 
     def _send(self, cmd):
         """
@@ -119,8 +116,9 @@ class Jambel(object):
         :type cmd: string
         :return: Jambel's response
         """
-        self._conn.write('%s\n' % cmd)
-        return self._conn.read_until('\n')
+        conn = telnetlib.Telnet(self.host, self.port)
+        conn.write('%s\n' % cmd)
+        return conn.read_until('\n')
 
     def _on(self, module, duration=None):
         if duration:

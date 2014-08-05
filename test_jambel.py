@@ -7,50 +7,74 @@ import jambel as _jambel
 
 class TelnetMock(object):
 
-    def __init__(self, host, port):
-        self.host, self.port = host, port
+    """
+    Class mocking the most relevant methods of :class:`telnetlib.Telnet`. Interactions are reported back to the
+    a :class:`MockConnectionFactory` instance for later reference.
+    """
+
+    def __init__(self, mock):
         self.closed = False
-        self._last_cmd = None
-        self.mock_response = None
+        self.mock = mock
 
     def write(self, cmd):
-        self._last_cmd = cmd
+        self.mock.last_cmd = cmd
 
     def read_until(self, *args, **kwargs):
-        return self.mock_response
+        return self.mock.response
 
     def close(self):
         self.closed = True
 
 
-@pytest.fixture(autouse=True)
-def mock_telnet(monkeypatch):
-    monkeypatch.setattr(telnetlib, 'Telnet', TelnetMock)
+class MockConnectionFactory(object):
+
+    """
+    Returns instantiated :class:`TelnetMock` objects. This mechanism is used in order to have one instance per test,
+    which can reliabley be queried for mocked response and last command sent.
+
+    Using a global reference instance would not work with parallel tests, for instance.
+    """
+
+    def __init__(self):
+        self.last_cmd = None
+        self.response = None
+
+    def __call__(self, host, port):
+        return TelnetMock(self)
+
+
+@pytest.fixture(scope='function', autouse=True)
+def mock_telnet(request, monkeypatch):
+    mock = MockConnectionFactory()
+    monkeypatch.setattr(telnetlib, 'Telnet', mock)
+    return mock
 
 @pytest.fixture(scope='function')
-def jambel(request):
-    return _jambel.Jambel('my.host')
+def jambel(request, mock_telnet):
+    light = _jambel.Jambel('my.host')
+    light.__connection = mock_telnet
+    return light
 
 
 def test_init_jambel(jambel):
-    assert jambel._conn.host == 'my.host'
-    assert jambel._conn.port == jambel.DEFAULT_PORT
+    assert jambel.host == 'my.host'
+    assert jambel.port == jambel.DEFAULT_PORT
 
 
 def test_init_jambel_with_custom_port():
     jambel = _jambel.Jambel('my.host', 8000)
-    assert jambel._conn.host == 'my.host'
-    assert jambel._conn.port == 8000
+    assert jambel.host == 'my.host'
+    assert jambel.port == 8000
 
 
 def test_status(jambel):
-    jambel._conn.mock_response = 'status=0,0,0,1\r\n'
+    jambel.__connection.response = 'status=0,0,0,1\r\n'
     assert jambel.status() == [0, 0, 0]
 
 
 def test_set(jambel):
     jambel.set(_jambel.PANIC)
-    assert jambel._conn._last_cmd == 'set_all=3,3,3,0\n'
+    assert jambel.__connection.last_cmd == 'set_all=3,3,3,0\n'
 
 
 def test_init_jambel_modules_bottom_up():
