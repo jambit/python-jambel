@@ -117,8 +117,8 @@ class Jambel(object):
         :return: Jambel's response
         """
         conn = telnetlib.Telnet(self.host, self.port)
-        conn.write('%s\n' % cmd)
-        return conn.read_until('\n')
+        conn.write(('%s\n' % cmd).encode('utf-8'))
+        return conn.read_until('\n'.encode('utf-8'))
 
     def _on(self, module, duration=None):
         if duration:
@@ -177,7 +177,7 @@ class Jambel(object):
         result = self._send('status')
         try:
             values = self._status_reg.search(result).group(1)
-            codes = map(int, values.split(','))[:3]
+            codes = list(map(int, values.split(',')))[:3]
             if not raw and not self._green_first:
                 codes.reverse()
             return codes
@@ -190,7 +190,7 @@ class Jambel(object):
 
         :param status: list status codes for each light module ([green, yellow, red])
         """
-        codes = map(str, status)
+        codes = list(map(str, status))
         if not self._green_first:
             codes.reverse()
         self._send('set_all=%s' % ','.join(codes + ['0']))
@@ -205,7 +205,7 @@ class Jambel(object):
 if __name__ == '__main__':
     import time
     with Jambel('ampel3.dev.jambit.com') as jambel:
-        print jambel.version()
+        print(jambel.version())
         jambel.green.blink_time(100, 200)
         jambel.yellow.blink_time(130, 300)
         jambel.red.blink_time(210, 100)
@@ -213,5 +213,5 @@ if __name__ == '__main__':
         jambel.yellow.blink()
         jambel.red.blink()
         jambel.set(ALL_OFF)
-        # time.sleep(10)
-        print repr(jambel.status())
+        time.sleep(10)
+        print(repr(jambel.status()))

@@ -44,13 +44,13 @@ class MockConnectionFactory(object):
 
 
 @pytest.fixture(scope='function', autouse=True)
-def mock_telnet(request, monkeypatch):
+def mock_telnet(monkeypatch):
     mock = MockConnectionFactory()
     monkeypatch.setattr(telnetlib, 'Telnet', mock)
     return mock
 
 @pytest.fixture(scope='function')
-def jambel(request, mock_telnet):
+def jambel(mock_telnet):
     light = _jambel.Jambel('my.host')
     light.__connection = mock_telnet
     return light
@@ -68,13 +68,13 @@ def test_init_jambel_with_custom_port():
 
 
 def test_status(jambel):
-    jambel.__connection.response = 'status=0,0,0,1\r\n'
+    jambel.__connection.response = 'status=0,0,0,1\r\n'.encode('utf-8')
     assert jambel.status() == [0, 0, 0]
 
 
 def test_set(jambel):
     jambel.set(_jambel.PANIC)
-    assert jambel.__connection.last_cmd == 'set_all=3,3,3,0\n'
+    assert jambel.__connection.last_cmd == 'set_all=3,3,3,0\n'.encode('utf-8')
 
 
 def test_init_jambel_modules_bottom_up():
