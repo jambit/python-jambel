@@ -149,7 +149,7 @@ class Jambel(object):
     def set_blink_time(self, module, on_time, off_time):
         self._send('blink_time=%i,%i,%i' % (module, on_time, off_time))
 
-    _status_reg = re.compile(r'^status=(\d+(?:,\d+)*)')
+    _status_reg = re.compile(r'^status=(\d+(?:,\d+)*)'.encode('utf-8'))
 
     def status(self, raw=False):
         """
@@ -176,7 +176,7 @@ class Jambel(object):
         """
         result = self._send('status')
         try:
-            values = self._status_reg.search(result).group(1)
+            values = self._status_reg.search(result).group(1).decode()
             codes = list(map(int, values.split(',')))[:3]
             if not raw and not self._green_first:
                 codes.reverse()
