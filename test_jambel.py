@@ -30,22 +30,37 @@ class MockConnectionFactory(object):
 
     """
     Returns instantiated :class:`TelnetMock` objects. This mechanism is used in order to have one instance per test,
-    which can reliabley be queried for mocked response and last command sent.
+    which can reliably be queried for mocked response and last command sent.
 
     Using a global reference instance would not work with parallel tests, for instance.
     """
 
     def __init__(self):
-        self.last_cmd = None
-        self.response = None
+        self._lastcmd = None
+        self._response = None
 
     def __call__(self, host, port):
         return TelnetMock(self)
+
+    @property
+    def last_cmd(self):
+        return self._lastcmd.decode('UTF-8')
+    @last_cmd.setter
+    def last_cmd(self, value):
+        self._lastcmd = value
+
+    @property
+    def response(self):
+        return self._response
+    @response.setter
+    def response(self, value):
+        self._response = value.encode('UTF-8')
 
 
 @pytest.fixture(scope='function', autouse=True)
 def mock_telnet(monkeypatch):
     mock = MockConnectionFactory()
+    mock.response = 'OK\r\n'  # standard response
     monkeypatch.setattr(telnetlib, 'Telnet', mock)
     return mock
 
@@ -68,13 +83,13 @@ def test_init_jambel_with_custom_port():
 
 
 def test_status(jambel):
-    jambel.__connection.response = 'status=0,0,0,1\r\n'.encode('utf-8')
+    jambel.__connection.response = 'status=0,0,0,1\r\n'
     assert jambel.status() == [0, 0, 0]
 
 
 def test_set(jambel):
     jambel.set(_jambel.PANIC)
-    assert jambel.__connection.last_cmd == 'set_all=3,3,3,0\n'.encode('utf-8')
+    assert jambel.__connection.last_cmd == 'set_all=3,3,3,0\n'
 
 
 def test_init_jambel_modules_bottom_up():

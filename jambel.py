@@ -118,7 +118,7 @@ class Jambel(object):
         """
         conn = telnetlib.Telnet(self.host, self.port)
         conn.write(('%s\n' % cmd).encode('utf-8'))
-        return conn.read_until('\n'.encode('utf-8'))
+        return conn.read_until('\n'.encode('utf-8')).decode('utf-8')
 
     def _on(self, module, duration=None):
         if duration:
@@ -149,7 +149,7 @@ class Jambel(object):
     def set_blink_time(self, module, on_time, off_time):
         self._send('blink_time=%i,%i,%i' % (module, on_time, off_time))
 
-    _status_reg = re.compile(r'^status=(\d+(?:,\d+)*)'.encode('utf-8'))
+    _status_reg = re.compile(r'^status=(\d+(?:,\d+)*)')
 
     def status(self, raw=False):
         """
@@ -176,7 +176,7 @@ class Jambel(object):
         """
         result = self._send('status')
         try:
-            values = self._status_reg.search(result).group(1).decode()
+            values = self._status_reg.search(result).group(1)
             codes = list(map(int, values.split(',')))[:3]
             if not raw and not self._green_first:
                 codes.reverse()
