@@ -5,6 +5,7 @@ Interface to jambit's project traffic lights.
 Sebastian Rahlf <sebastian.rahlf@jambit.com>
 """
 
+import logging
 import telnetlib
 import re
 
@@ -89,6 +90,8 @@ class Jambel(object):
 
     DEFAULT_PORT = 10001
 
+    _logger = logging.getLogger('Jambel')
+
     def __init__(self, host, port=DEFAULT_PORT, green=TOP):
         """
         :param host: Jambel host name/IP address
@@ -116,9 +119,14 @@ class Jambel(object):
         :type cmd: string
         :return: Jambel's response
         """
+        self._logger.debug('Connecting to %s:%s...' % (self.host, self.port))
         conn = telnetlib.Telnet(self.host, self.port)
-        conn.write(('%s\n' % cmd).encode('utf-8'))
-        return conn.read_until('\n'.encode('utf-8')).decode('utf-8')
+        value = ('%s\n' % cmd).encode('utf-8')
+        self._logger.debug('Send command %r.' % value)
+        conn.write(value)
+        response = conn.read_until('\n'.encode('utf-8')).decode('utf-8')
+        self._logger.debug('Received response %r.' % response)
+        return response
 
     def _on(self, module, duration=None):
         if duration:
@@ -204,6 +212,7 @@ class Jambel(object):
 
 if __name__ == '__main__':
     import time
+    logging.basicConfig(level=logging.DEBUG)
     with Jambel('ampel3.dev.jambit.com') as jambel:
         print(jambel.version())
         jambel.green.blink_time(100, 200)
