@@ -98,6 +98,30 @@ def test_status(jambel):
     assert jambel.status() == [0, 0, 0]
 
 
+def test_status_for_individual_lights(jambel):
+    jambel.__connection.response = 'status=2,3,4,1\r\n'
+    assert jambel.green.status() == 4
+    assert jambel.yellow.status() == 3
+    assert jambel.red.status() == 2
+
+
+def test_set_blink_time(jambel):
+    jambel.set_blink_time(1, 234, 567)
+    assert jambel.__connection.last_cmd == 'blink_time=1,234,567\n'
+
+
+def test_set_blink_time_for_individual_lights(jambel):
+    jambel.__connection.response = 'status=2,3,4,1\r\n'
+    jambel.green.blink_time(12, 34)
+    jambel.yellow.blink_time(56, 78)
+    jambel.red.blink_time(90, 12)
+    assert jambel.__connection.history()[:3] == [
+        'blink_time=1,90,12',
+        'blink_time=2,56,78',
+        'blink_time=3,12,34',
+    ]
+
+
 def test_set(jambel):
     jambel.set(_jambel.PANIC)
     assert jambel.__connection.last_cmd == 'set_all=3,3,3,0\n'

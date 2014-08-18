@@ -45,7 +45,7 @@ class LightModule(object):
         self._jambel = jambel
         self._no = no
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '<%s module=%d>' % (self.__class__.__name__, self._no)
 
     def on(self, duration=None):
@@ -64,7 +64,7 @@ class LightModule(object):
         self._jambel._flash(self._no)  # pylint: disable=W0212
 
     def status(self):
-        return self._jambel.status(raw=True)[self._no]
+        return self._jambel.status(raw=True)[self._no-1]
 
     def blink_time(self, on, off):
         """
@@ -118,7 +118,7 @@ class Jambel(object):
         if exc_type is not None:  # an exception has occurred
             return False          # re-raise the exception
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '<%s at %s:%s>' % (self.__class__.__name__, self.host, self.port)
 
     def _send(self, cmd):
@@ -287,7 +287,7 @@ def main(args=None):
             fnc()
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     # main(['ampel3.dev.jambit.com', 'green=on', 'yellow=blink', 'red=off', '--debug'])
     # main(['ampel3.dev.jambit.com', 'reset'])
     main()
