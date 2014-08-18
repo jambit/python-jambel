@@ -36,18 +36,29 @@ class MockConnectionFactory(object):
     """
 
     def __init__(self):
-        self._lastcmd = None
+        self._lastcmd = []
         self._response = None
+        self.last_addr = None
 
     def __call__(self, host, port):
+        self.last_addr = (host, port)
         return TelnetMock(self)
 
     @property
     def last_cmd(self):
-        return self._lastcmd.decode('UTF-8')
+        return self._lastcmd[-1].decode('UTF-8')
     @last_cmd.setter
     def last_cmd(self, value):
-        self._lastcmd = value
+        self._lastcmd.append(value)
+
+    def history(self, strip=True):
+        """
+        Returns a list of previously called commands with the most recent first.
+        :param strip: run strip() on each command to get rid of ``\r\n``
+        """
+        cmds = map(lambda x: x.decode('UTF-8'), self._lastcmd)
+        history = list(map(lambda x: x.strip(), cmds) if strip else cmds)
+        return history[::-1]
 
     @property
     def response(self):
@@ -99,4 +110,38 @@ def test_init_jambel_modules_bottom_up():
 def test_init_jambel_modules_top_down():
     jambel = _jambel.Jambel('my.host', green=_jambel.TOP)
     assert jambel.green._no == 3
+
+
+def test_main_needs_parameters():
+    pytest.raises(SystemExit, _jambel.main, [])
+
+
+@pytest.mark.parametrize('input,output', [
+    ('my.host', ('my.host', _jambel.Jambel.DEFAULT_PORT)),
+    ('my.host:8118', ('my.host', 8118)),
+])
+def test_main_jambel_address(mock_telnet, input, output):
+    _jambel.main([input, 'version'])
+    assert mock_telnet.last_cmd.strip() == 'version'
+    assert mock_telnet.last_addr == output
+
+
+@pytest.mark.parametrize('input,output', [
+    (['version'], 'version'),
+    (['red=on'],      'set=1,on'),
+    (['yellow=off'],  'set=2,off'),
+    (['green=blink'], 'set=3,blink'),
+    (['red=off', '--red-on-top'],             'set=3,off'),
+    (['yellow=flash', '--red-on-top'],        'set=2,flash'),
+    (['green=blink_inverse', '--red-on-top'], 'set=1,blink_invers'),
+])
+def test_main_commands(mock_telnet, input, output):
+    _jambel.main(['my.host'] + input)
+    assert mock_telnet.last_cmd.strip() == output
+
+
+def test_main_multiple_commands_are_executed_in_order(mock_telnet):
+    _jambel.main(['my.host', 'green=on', 'yellow=blink', 'red=off', '--debug'])
+    assert mock_telnet.history() == ['set=1,off', 'set=2,blink', 'set=3,on']
+
 

@@ -1,10 +1,18 @@
+#!/usr/bin/env python
+# Sebastian Rahlf <sebastian.rahlf@jambit.com>
 
 """
 Interface to jambit's project traffic lights.
 
-Sebastian Rahlf <sebastian.rahlf@jambit.com>
+To remote control a Jambel, simply run this script::
+
+    jambel.py ampel3.dev.jambit.com --debug green=on yellow=blink red=off
+    jambel.py ampel3.dev.jambit.com:10001 reset
+
 """
 
+import argparse
+import functools
 import logging
 import telnetlib
 import re
@@ -44,16 +52,16 @@ class LightModule(object):
         """
         :param duration: on duration (in ms)
         """
-        self._jambel._on(self._no, duration)
+        self._jambel._on(self._no, duration)  # pylint: disable=W0212
 
     def off(self):
         self._jambel._off(self._no)
 
     def blink(self, inverse=False):
-        self._jambel._blink(self._no, inverse)
+        self._jambel._blink(self._no, inverse)  # pylint: disable=W0212
 
     def flash(self):
-        self._jambel._flash(self._no)
+        self._jambel._flash(self._no)  # pylint: disable=W0212
 
     def status(self):
         return self._jambel.status(raw=True)[self._no]
@@ -108,7 +116,7 @@ class Jambel(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:  # an exception has occurred
-            return False          # reraise the exception
+            return False          # re-raise the exception
 
     def __repr__(self):
         return '<%s at %s:%s>' % (self.__class__.__name__, self.host, self.port)
@@ -210,17 +218,76 @@ class Jambel(object):
         return self._send('version')
 
 
+def main(args=None):
+    """
+    CLI interface. Try ``main(['-h'])`` to find out more.
+    """
+    single = ['status', 'reset', 'version', 'test']
+    multi = ['green', 'yellow', 'red']
+    allowed_values = ['on', 'off', 'blink', 'blink_inverse', 'flash']
+
+    def addr(string):
+        parts = string.split(':')
+        if len(parts) == 1:
+            return parts[0], Jambel.DEFAULT_PORT
+        if len(parts) == 2:
+            try:
+                return parts[0], int(parts[1])
+            except ValueError:
+                msg = "Port needs to be integer!"
+                raise argparse.ArgumentTypeError(msg)
+        msg = "Address format: HOST[:PORT]!"
+        raise argparse.ArgumentTypeError(msg)
+
+    def command(string):
+        parts = string.split('=')
+        command = parts[0].lower()
+        if command in single:
+            return command, None
+        if command in multi:
+            if len(parts) != 2:
+                msg = "Command needs format %s=VALUE!" % command
+                raise argparse.ArgumentTypeError(msg)
+            value = parts[1]
+            if value not in allowed_values:
+                msg = "Value for command %s needs to be one of %r!" % (command, allowed_values)
+                raise argparse.ArgumentTypeError(msg)
+            return command, value
+        msg = "Command not found!" % command
+        raise argparse.ArgumentTypeError(msg)
+
+    parser = argparse.ArgumentParser(description='Remote control a Jambel.')
+    parser.add_argument('addr', metavar='HOST', type=addr, help='Jambel address (format: <host>[:<port>])')
+    parser.add_argument('commands', metavar='CMD', type=command, nargs='+',
+        help='A command for the jambel to execute. Multiple commands are executed in order')
+    parser.add_argument('--debug', action='store_true', default=False,
+        help='Turn debugging on')
+    parser.add_argument('--red-on-top', dest='green_position', action='store_const', const=BOTTOM, default=TOP,
+        help='Red light is on top (default: bottom)')
+
+    args = parser.parse_args(args)
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+
+    jambel = Jambel(args.addr[0], args.addr[1], green=args.green_position)
+    for cmd, value in args.commands:
+        if cmd in single:
+            fnc = getattr(jambel, cmd)
+            fnc()
+        else:
+            light = getattr(jambel, cmd)
+            fnc = {
+                'on': light.on,
+                'off': light.off,
+                'blink': light.blink,
+                'blink_inverse': functools.partial(light.blink, inverse=True),
+                'flash': light.flash
+            }[value]
+            fnc()
+
+
 if __name__ == '__main__':
-    import time
-    logging.basicConfig(level=logging.DEBUG)
-    with Jambel('ampel3.dev.jambit.com') as jambel:
-        print(jambel.version())
-        jambel.green.blink_time(100, 200)
-        jambel.yellow.blink_time(130, 300)
-        jambel.red.blink_time(210, 100)
-        jambel.green.blink()
-        jambel.yellow.blink()
-        jambel.red.blink()
-        jambel.set(ALL_OFF)
-        time.sleep(10)
-        print(repr(jambel.status()))
+    # main(['ampel3.dev.jambit.com', 'green=on', 'yellow=blink', 'red=off', '--debug'])
+    # main(['ampel3.dev.jambit.com', 'reset'])
+    main()
