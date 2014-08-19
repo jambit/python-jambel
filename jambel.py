@@ -52,16 +52,16 @@ class LightModule(object):
         """
         :param duration: on duration (in ms)
         """
-        self._jambel._on(self._no, duration)  # pylint: disable=W0212
+        return self._jambel._on(self._no, duration)  # pylint: disable=W0212
 
     def off(self):
-        self._jambel._off(self._no)
+        return self._jambel._off(self._no)
 
     def blink(self, inverse=False):
-        self._jambel._blink(self._no, inverse)  # pylint: disable=W0212
+        return self._jambel._blink(self._no, inverse)  # pylint: disable=W0212
 
     def flash(self):
-        self._jambel._flash(self._no)  # pylint: disable=W0212
+        return self._jambel._flash(self._no)  # pylint: disable=W0212
 
     def status(self):
         return self._jambel.status(raw=True)[self._no-1]
@@ -71,7 +71,7 @@ class LightModule(object):
         :param on: on time (in ms)
         :param off: off time (in ms)
         """
-        self._jambel.set_blink_time(self._no, on, off)
+        return self._jambel.set_blink_time(self._no, on, off)
 
 
 class Jambel(object):
@@ -140,30 +140,49 @@ class Jambel(object):
         if duration:
             if duration > 65000:
                 raise ValueError('Max duration 65000 ms!')
-            self._send('set=%i,%i' % (module, duration))
+            return self._send('set=%i,%i' % (module, duration))
         else:
-            self._send('set=%i,on' % module)
+            return self._send('set=%i,on' % module)
 
     def _off(self, module):
-        self._send('set=%i,off' % module)
+        return self._send('set=%i,off' % module)
 
     def _blink(self, module, inverse=False):
-        self._send('set=%i,%s' % (module, 'blink' if not inverse else 'blink_invers'))
+        return self._send('set=%i,%s' % (module, 'blink' if not inverse else 'blink_invers'))
 
     def _flash(self, module):
-        self._send('set=%i,flash' % module)
+        return self._send('set=%i,flash' % module)
 
     def reset(self):
-        self._send('reset')
+        """
+        Switches all lights off and sets blink times to default values.
+        :return:
+        """
+        return self._send('reset')
 
     def set_blink_time_on(self, duration):
-        self._send('blink_time_on=%i' % duration)
+        """
+        Sets time lights are ON for all modules.
+        :param duration: time in ms
+        """
+        return self._send('blink_time_on=%i' % duration)
 
     def set_blink_time_off(self, duration):
-        self._send('blink_time_off=%i' % duration)
+        """
+        Sets time lights are OFF for all modules.
+        :param duration: time in ms
+        """
+        return self._send('blink_time_off=%i' % duration)
 
     def set_blink_time(self, module, on_time, off_time):
-        self._send('blink_time=%i,%i,%i' % (module, on_time, off_time))
+        """
+        Sets time lights are ON and OFF for specific module.
+        :param module:
+        :param on_time:
+        :param off_time:
+        :return:
+        """
+        return self._send('blink_time=%i,%i,%i' % (module, on_time, off_time))
 
     _status_reg = re.compile(r'^status=(\d+(?:,\d+)*)')
 
@@ -209,12 +228,19 @@ class Jambel(object):
         codes = list(map(str, status))
         if not self._green_first:
             codes.reverse()
-        self._send('set_all=%s' % ','.join(codes + ['0']))
+        return self._send('set_all=%s' % ','.join(codes + ['0']))
 
     def test(self):
-        return self._send('test')
+        """
+        Tests communication without disturbing anything
+        :return: ``True`` if Jambel answered with "OK", ``False`` otherwise.
+        """
+        return self._send('test').strip() == 'OK'
 
     def version(self):
+        """
+        Returns version string.
+        """
         return self._send('version')
 
 
@@ -225,6 +251,7 @@ def main(args=None):
     single = ['status', 'reset', 'version', 'test']
     multi = ['green', 'yellow', 'red']
     allowed_values = ['on', 'off', 'blink', 'blink_inverse', 'flash']
+    chatty = ['status', 'version', 'test']
 
     def addr(string):
         parts = string.split(':')
@@ -274,7 +301,6 @@ def main(args=None):
     for cmd, value in args.commands:
         if cmd in single:
             fnc = getattr(jambel, cmd)
-            fnc()
         else:
             light = getattr(jambel, cmd)
             fnc = {
@@ -284,7 +310,9 @@ def main(args=None):
                 'blink_inverse': functools.partial(light.blink, inverse=True),
                 'flash': light.flash
             }[value]
-            fnc()
+        result = fnc()
+        if cmd in chatty:
+            print(result)
 
 
 if __name__ == '__main__':  # pragma: no cover
