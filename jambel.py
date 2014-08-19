@@ -27,6 +27,10 @@ BLINK_INVERSE = 4
 TOP = 'top'
 BOTTOM = 'bottom'
 
+GREEN = 'green'
+YELLOW = 'yellow'
+RED = 'red'
+
 ALL_OFF = [OFF, OFF, OFF]
 PANIC = [FLASH, FLASH, FLASH]
 
@@ -43,35 +47,35 @@ class LightModule(object):
         :type no: int
         """
         self._jambel = jambel
-        self._no = no
+        self.colour = no
 
     def __repr__(self):  # pragma: no cover
-        return '<%s module=%d>' % (self.__class__.__name__, self._no)
+        return '<%s module=%d>' % (self.__class__.__name__, self.colour)
 
     def on(self, duration=None):
         """
         :param duration: on duration (in ms)
         """
-        return self._jambel._on(self._no, duration)  # pylint: disable=W0212
+        return self._jambel._on(self.colour, duration)  # pylint: disable=W0212
 
     def off(self):
-        return self._jambel._off(self._no)
+        return self._jambel._off(self.colour)
 
     def blink(self, inverse=False):
-        return self._jambel._blink(self._no, inverse)  # pylint: disable=W0212
+        return self._jambel._blink(self.colour, inverse)  # pylint: disable=W0212
 
     def flash(self):
-        return self._jambel._flash(self._no)  # pylint: disable=W0212
+        return self._jambel._flash(self.colour)  # pylint: disable=W0212
 
     def status(self):
-        return self._jambel.status(raw=True)[self._no-1]
+        return self._jambel.status()[self.colour]
 
     def blink_time(self, on, off):
         """
         :param on: on time (in ms)
         :param off: off time (in ms)
         """
-        return self._jambel.set_blink_time(self._no, on, off)
+        return self._jambel.set_blink_time(self.colour, on, off)
 
 
 class Jambel(object):
@@ -107,9 +111,11 @@ class Jambel(object):
         :param green: ``BOTTOM`` if green module is at the bottom, ``TOP`` otherwise
         """
         self.host, self.port = host, port
-        self._green_first = green == BOTTOM
-        order = range(1, 4) if self._green_first else range(3, 0, -1)
-        self.green, self.yellow, self.red = [LightModule(self, no) for no in order]
+        self._order = [GREEN, YELLOW, RED] if green == BOTTOM else [RED, YELLOW, GREEN]
+
+        self.green = LightModule(self, GREEN)
+        self.yellow = LightModule(self, YELLOW)
+        self.red = LightModule(self, RED)
 
     def __enter__(self):
         return self
@@ -136,7 +142,8 @@ class Jambel(object):
         self._logger.debug('Received response %r.' % response)
         return response
 
-    def _on(self, module, duration=None):
+    def _on(self, colour, duration=None):
+        module = self._get_module_no(colour)
         if duration:
             if duration > 65000:
                 raise ValueError('Max duration 65000 ms!')
@@ -144,13 +151,16 @@ class Jambel(object):
         else:
             return self._send('set=%i,on' % module)
 
-    def _off(self, module):
+    def _off(self, colour):
+        module = self._get_module_no(colour)
         return self._send('set=%i,off' % module)
 
-    def _blink(self, module, inverse=False):
+    def _blink(self, colour, inverse=False):
+        module = self._get_module_no(colour)
         return self._send('set=%i,%s' % (module, 'blink' if not inverse else 'blink_invers'))
 
-    def _flash(self, module):
+    def _flash(self, colour):
+        module = self._get_module_no(colour)
         return self._send('set=%i,flash' % module)
 
     def reset(self):
@@ -174,25 +184,25 @@ class Jambel(object):
         """
         return self._send('blink_time_off=%i' % duration)
 
-    def set_blink_time(self, module, on_time, off_time):
+    def set_blink_time(self, colour, on_time, off_time):
         """
         Sets time lights are ON and OFF for specific module.
-        :param module:
-        :param on_time:
-        :param off_time:
-        :return:
+        :param colour: coulour of light module
+        :param on_time: time in ms
+        :param off_time: time in ms
         """
+        module = self._get_module_no(colour)
         return self._send('blink_time=%i,%i,%i' % (module, on_time, off_time))
 
     _status_reg = re.compile(r'^status=(\d+(?:,\d+)*)')
 
-    def status(self, raw=False):
+    def status(self):
         """
         Will return a list of status codes for the light modules. ::
 
             >>> jambel = Jambel('ampel5.dev.jambit.com')
-            >>> green, yellow, red = jambel.status()
-            >>> if green == BLINK:
+            >>> status = jambel.status()
+            >>> if status[GREEN] == BLINK:
             ...     print 'green light is blinking!'
 
         Status code are:
@@ -203,19 +213,13 @@ class Jambel(object):
         * FLASH
         * BLINK_INVERSE
 
-        If you want to see which module has which status without mapping it to position of the individualcolours,
-        use ``raw=True``.
-
-        :param raw: returns list of status codes as it comes from the Jambel, i.e. without ordering by light colour
-        :return: list of status codes for each light module ([green, yellow, red])
+        :return: dict with light colours mapping to their status codes
         """
         result = self._send('status')
         try:
             values = self._status_reg.search(result).group(1)
             codes = list(map(int, values.split(',')))[:3]
-            if not raw and not self._green_first:
-                codes.reverse()
-            return codes
+            return dict(zip(self._order, codes))
         except (TypeError, ValueError):
             raise TypeError('Could not parse jambel status %r!' % result)
 
@@ -226,7 +230,7 @@ class Jambel(object):
         :param status: list status codes for each light module ([green, yellow, red])
         """
         codes = list(map(str, status))
-        if not self._green_first:
+        if not self._order[0] == GREEN:
             codes.reverse()
         return self._send('set_all=%s' % ','.join(codes + ['0']))
 
@@ -242,6 +246,10 @@ class Jambel(object):
         Returns version string.
         """
         return self._send('version')
+
+    def _get_module_no(self, colour):
+        """Returns number of light module"""
+        return self._order.index(colour) + 1
 
 
 def main(args=None):

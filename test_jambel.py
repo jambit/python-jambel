@@ -95,18 +95,19 @@ def test_init_jambel_with_custom_port():
 
 def test_status(jambel):
     jambel.__connection.response = 'status=0,0,0,1\r\n'
-    assert jambel.status() == [0, 0, 0]
+    assert jambel.status() == {_jambel.GREEN: 0, _jambel.RED: 0, _jambel.YELLOW: 0}
 
 
 def test_status_for_individual_lights(jambel):
     jambel.__connection.response = 'status=2,3,4,1\r\n'
+    assert jambel._order == [_jambel.RED, _jambel.YELLOW, _jambel.GREEN]
     assert jambel.green.status() == 4
     assert jambel.yellow.status() == 3
     assert jambel.red.status() == 2
 
 
 def test_set_blink_time(jambel):
-    jambel.set_blink_time(1, 234, 567)
+    jambel.set_blink_time(_jambel.RED, 234, 567)
     assert jambel.__connection.last_cmd == 'blink_time=1,234,567\n'
 
 
@@ -129,11 +130,11 @@ def test_set(jambel):
 
 def test_init_jambel_modules_bottom_up():
     jambel = _jambel.Jambel('my.host', green=_jambel.BOTTOM)
-    assert jambel.green._no == 1
+    assert jambel._order == [_jambel.GREEN, _jambel.YELLOW, _jambel.RED]
 
 def test_init_jambel_modules_top_down():
     jambel = _jambel.Jambel('my.host', green=_jambel.TOP)
-    assert jambel.green._no == 3
+    assert jambel._order == [_jambel.RED, _jambel.YELLOW, _jambel.GREEN]
 
 
 def test_main_needs_parameters():
