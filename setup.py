@@ -11,6 +11,12 @@ setup(
     author_email='sebastian.rahlf@jambit.com',
     description="Interface to jambit's project traffic lights.",
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.txt')).read(),
+    test_requires=['pytest'],
+    entry_points={
+        'console_scripts': [
+            'jambel = jambel:main',
+        ]
+    },
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
