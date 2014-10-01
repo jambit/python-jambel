@@ -10,7 +10,7 @@ setup(
     author='Sebastian Rahlf',
     author_email='sebastian.rahlf@jambit.com',
     description="Interface to jambit's project traffic lights.",
-    long_description=open(os.path.join(os.path.dirname(__file__), 'README.txt')).read(),
+    long_description=open(os.path.join(os.path.dirname(__file__), 'README.rst')).read(),
     test_requires=['pytest'],
     entry_points={
         'console_scripts': [
