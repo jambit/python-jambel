@@ -41,16 +41,16 @@ class LightModule(object):
     A single light module of a Jambel.
     """
 
-    def __init__(self, jambel, no):
+    def __init__(self, jambel, colour):
         """
         :type jambel: Jambel
-        :type no: int
+        :type colour: str
         """
         self._jambel = jambel
-        self.colour = no
+        self.colour = colour
 
     def __repr__(self):  # pragma: no cover
-        return '<%s module=%d>' % (self.__class__.__name__, self.colour)
+        return '<%s module=%s>' % (self.__class__.__name__, self.colour)
 
     def on(self, duration=None):
         """
