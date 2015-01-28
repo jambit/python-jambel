@@ -276,19 +276,22 @@ def main(args=None):
 
     def command(string):
         parts = string.split('=')
-        command = parts[0].lower()
-        if command in single:
-            return command, None
-        if command in multi:
+        _cmd = parts[0].lower()
+        if _cmd in single:
+            if len(parts) > 1:
+                msg = "Command %s needs has no parameter!" % _cmd
+                raise argparse.ArgumentTypeError(msg)
+            return _cmd, None
+        if _cmd in multi:
             if len(parts) != 2:
-                msg = "Command needs format %s=VALUE!" % command
+                msg = "Command needs format %s=VALUE!" % _cmd
                 raise argparse.ArgumentTypeError(msg)
-            value = parts[1]
-            if value not in allowed_values:
-                msg = "Value for command %s needs to be one of %r!" % (command, allowed_values)
+            val = parts[1]
+            if val not in allowed_values:
+                msg = "Value for command %s needs to be one of %r!" % (_cmd, allowed_values)
                 raise argparse.ArgumentTypeError(msg)
-            return command, value
-        msg = "Command not found!" % command
+            return _cmd, val
+        msg = "Command not found!" % _cmd
         raise argparse.ArgumentTypeError(msg)
 
     parser = argparse.ArgumentParser(description='Remote control a Jambel.')
