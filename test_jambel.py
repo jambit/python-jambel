@@ -1,5 +1,6 @@
 
 import telnetlib
+
 import pytest
 
 import jambel as _jambel
@@ -151,6 +152,14 @@ def test_main_jambel_address(mock_telnet, input, output):
     assert mock_telnet.last_addr == output
 
 
+@pytest.mark.parametrize('input', [
+    'my.host:',
+    'my.host:bork', 
+])
+def test_main_jambel_address_fails_for_wrong_format(input):
+    pytest.raises(SystemExit, _jambel.main, [input, 'version'])
+
+
 @pytest.mark.parametrize('input,output', [
     (['version'], 'version'),
     (['red=on'],      'set=1,on'),
@@ -165,8 +174,29 @@ def test_main_commands(mock_telnet, input, output):
     assert mock_telnet.last_cmd.strip() == output
 
 
+@pytest.mark.parametrize('input', [
+    ['version=on'],
+    ['unknown'],
+    ['unknown=command'],
+    ['green=scream'],
+])
+def test_main_commands_fail_with_wrong_syntax(input):
+    pytest.raises(SystemExit, _jambel.main, ['my.host'] + input)
+
+
 def test_main_multiple_commands_are_executed_in_order(mock_telnet):
     _jambel.main(['my.host', 'green=on', 'yellow=blink', 'red=off', '--debug'])
     assert mock_telnet.history() == ['set=1,off', 'set=2,blink', 'set=3,on']
+
+
+def test_context_processor_return_jambel_instance(jambel):
+    with jambel as j:
+        assert j is jambel
+
+
+def test_context_processor_does_not_swallow_exceptions(jambel):
+    with pytest.raises(RuntimeError):
+        with jambel as j:
+            raise RuntimeError
 
 
