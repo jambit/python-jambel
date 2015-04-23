@@ -4,9 +4,9 @@ import os
 setup(
     name='python-jambel',
     version='0.1',
-    py_module=['jambel'],
+    py_modules=['jambel'],
     url='http://github.com/jambit/python-jambel',
-    license='UNKNOWN',
+    license='MIT',
     author='Sebastian Rahlf',
     author_email='sebastian.rahlf@jambit.com',
     description="Interface to jambit's project traffic lights.",
