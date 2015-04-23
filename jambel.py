@@ -203,7 +203,7 @@ class Jambel(object):
             >>> jambel = Jambel('ampel5.dev.jambit.com')
             >>> status = jambel.status()
             >>> if status[GREEN] == BLINK:
-            ...     print 'green light is blinking!'
+            ...     print('green light is blinking!')
 
         Status code are:
 
