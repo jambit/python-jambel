@@ -21,4 +21,4 @@ It is also possible to query the jambel's status::
     if stats[jambel.GREEN] == jambel.BLINK:
         print('green light is blinking!')
 
-Interested in the hardware= Contact us at info@jambit.com
+Interested in the hardware? Contact us at info@jambit.com
