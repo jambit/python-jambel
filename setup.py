@@ -2,7 +2,7 @@ from setuptools import setup
 import os
 
 setup(
-    name='python-jambel',
+    name='jambel',
     version='0.1',
     py_modules=['jambel'],
     url='http://github.com/jambit/python-jambel',
