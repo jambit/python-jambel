@@ -2,8 +2,8 @@ from setuptools import setup
 import os
 
 setup(
-    name='python-jambel',
-    version='0.1',
+    name='jambel',
+    version='0.1.1',
     py_modules=['jambel'],
     url='http://github.com/jambit/python-jambel',
     license='MIT',
