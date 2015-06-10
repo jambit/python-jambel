@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 import os
 
 setup(
@@ -11,7 +11,7 @@ setup(
     author_email='sebastian.rahlf@jambit.com',
     description="Interface to jambit's project traffic lights.",
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.rst')).read(),
-    test_requires=['pytest'],
+    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'jambel = jambel:main',
