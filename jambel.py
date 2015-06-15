@@ -263,6 +263,9 @@ def main(args=None):
 
     def addr(string):
         parts = string.split(':')
+        if not parts[0]:
+            msg = "Host is required!"
+            raise argparse.ArgumentTypeError(msg)
         if len(parts) == 1:
             return parts[0], Jambel.DEFAULT_PORT
         if len(parts) == 2:
@@ -291,7 +294,7 @@ def main(args=None):
                 msg = "Value for command %s needs to be one of %r!" % (_cmd, allowed_values)
                 raise argparse.ArgumentTypeError(msg)
             return _cmd, val
-        msg = "Command not found!" % _cmd
+        msg = "Command %s not found!" % _cmd
         raise argparse.ArgumentTypeError(msg)
 
     parser = argparse.ArgumentParser(description='Remote control a Jambel.')

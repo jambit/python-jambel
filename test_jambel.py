@@ -124,9 +124,34 @@ def test_set_blink_time_for_individual_lights(jambel):
     ]
 
 
+def test_set_blink_time_on(jambel):
+    jambel.set_blink_time_on(123)
+    assert jambel.__connection.last_cmd == 'blink_time_on=123\n'
+
+
+def test_set_blink_time_off(jambel):
+    jambel.set_blink_time_off(567)
+    assert jambel.__connection.last_cmd == 'blink_time_off=567\n'
+
+
 def test_set(jambel):
     jambel.set(_jambel.PANIC)
     assert jambel.__connection.last_cmd == 'set_all=3,3,3,0\n'
+
+
+def test_reset(jambel):
+    jambel.reset()
+    assert jambel.__connection.last_cmd == 'reset\n'
+
+
+def test_test(jambel):
+    jambel.__connection.response = 'OK\r\n'
+    assert jambel.test() is True
+
+
+def test_version(jambel):
+    jambel.version()
+    assert jambel.__connection.last_cmd == 'version\n'
 
 
 def test_init_jambel_modules_bottom_up():
@@ -138,10 +163,12 @@ def test_init_jambel_modules_top_down():
     assert jambel._order == [_jambel.RED, _jambel.YELLOW, _jambel.GREEN]
 
 
+@pytest.mark.cli
 def test_main_needs_parameters():
     pytest.raises(SystemExit, _jambel.main, [])
 
 
+@pytest.mark.cli
 @pytest.mark.parametrize('input,output', [
     ('my.host', ('my.host', _jambel.Jambel.DEFAULT_PORT)),
     ('my.host:8118', ('my.host', 8118)),
@@ -152,14 +179,20 @@ def test_main_jambel_address(mock_telnet, input, output):
     assert mock_telnet.last_addr == output
 
 
+@pytest.mark.cli
 @pytest.mark.parametrize('input', [
+    '',
     'my.host:',
     'my.host:bork', 
+    'my.host:bork:',
+    ':1025',
+    ':bork', 
 ])
 def test_main_jambel_address_fails_for_wrong_format(input):
     pytest.raises(SystemExit, _jambel.main, [input, 'version'])
 
 
+@pytest.mark.cli
 @pytest.mark.parametrize('input,output', [
     (['version'], 'version'),
     (['red=on'],      'set=1,on'),
@@ -174,16 +207,20 @@ def test_main_commands(mock_telnet, input, output):
     assert mock_telnet.last_cmd.strip() == output
 
 
+@pytest.mark.cli
 @pytest.mark.parametrize('input', [
     ['version=on'],
     ['unknown'],
     ['unknown=command'],
+    ['red='],
     ['green=scream'],
+    ['yellow=='],
 ])
 def test_main_commands_fail_with_wrong_syntax(input):
     pytest.raises(SystemExit, _jambel.main, ['my.host'] + input)
 
 
+@pytest.mark.cli
 def test_main_multiple_commands_are_executed_in_order(mock_telnet):
     _jambel.main(['my.host', 'green=on', 'yellow=blink', 'red=off', '--debug'])
     assert mock_telnet.history() == ['set=1,off', 'set=2,blink', 'set=3,on']
