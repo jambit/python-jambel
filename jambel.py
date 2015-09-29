@@ -17,6 +17,7 @@ import logging
 import telnetlib
 import re
 
+__version__ = '0.1.1'
 
 OFF = 0
 ON = 1
