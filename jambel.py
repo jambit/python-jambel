@@ -4,10 +4,22 @@
 """
 Interface to jambit's project traffic lights.
 
+COMMANDS:
+
+  status       - Will return a list of status codes for the light modules as JSON.
+  version      - Returns version string.
+  reset        - Switches all lights off and sets blink times to default values.
+  test         - Tests communication without disturbing anything
+  <col>=<stat> - Set status for one colour module where
+                 <col> is one of [green, yellow, red]
+                 <stat> is one of [on, off, blink, blink_inverse, flash]
+
+EXAMPLES:
+
 To remote control a Jambel, simply run this script::
 
     jambel.py ampel3.dev.jambit.com --debug green=on yellow=blink red=off
-    jambel.py ampel3.dev.jambit.com:10001 reset
+    jambel.py ampel1.dev.jambit.com:10001 reset green=flash
 
 """
 
@@ -298,10 +310,12 @@ def main(args=None):
         msg = "Command %s not found!" % _cmd
         raise argparse.ArgumentTypeError(msg)
 
-    parser = argparse.ArgumentParser(description='Remote control a Jambel.')
+    parser = argparse.ArgumentParser(description=__doc__,
+            formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('addr', metavar='HOST', type=addr, help='Jambel address (format: <host>[:<port>])')
     parser.add_argument('commands', metavar='CMD', type=command, nargs='+',
-        help='A command for the jambel to execute. Multiple commands are executed in order')
+        help='A command for the jambel to execute. Multiple commands are executed in order. See COMMANDS '
+            'for more details.')
     parser.add_argument('--debug', action='store_true', default=False,
         help='Turn debugging on')
     parser.add_argument('--red-on-top', dest='green_position', action='store_const', const=BOTTOM, default=TOP,
