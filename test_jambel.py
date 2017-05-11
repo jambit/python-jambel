@@ -97,14 +97,36 @@ def test_init_jambel_with_custom_port():
 def test_status(jambel):
     jambel.__connection.response = 'status=0,0,0,1\r\n'
     assert jambel.status() == {_jambel.GREEN: 0, _jambel.RED: 0, _jambel.YELLOW: 0}
+    assert jambel.__connection.last_cmd == 'status\n'
 
+
+def test_status_parsing_incomplete_response_fails(jambel):
+    """
+    Bug found in production::
+    
+        DEBUG:Jambel:Connecting to ampel1.dev.jambit.com:10001...
+        DEBUG:Jambel:Send command 'status\n'.
+        DEBUG:Jambel:Received response u',0,0\r\n'.
+        Traceback (most recent call last):
+          File "./jambel.py", line 350, in <module>
+            main()
+          File "./jambel.py", line 342, in main
+            result = fnc()
+          File "./jambel.py", line 233, in status
+            values = self._status_reg.search(result).group(1)
+        AttributeError: 'NoneType' object has no attribute 'group'
+        
+    """
+    jambel.__connection.response = ',0,0\r\n'
+    with pytest.raises(TypeError):
+        jambel.status()
 
 def test_status_for_individual_lights(jambel):
     jambel.__connection.response = 'status=2,3,4,1\r\n'
     assert jambel._order == [_jambel.RED, _jambel.YELLOW, _jambel.GREEN]
-    assert jambel.green.status() == 4
-    assert jambel.yellow.status() == 3
-    assert jambel.red.status() == 2
+    assert jambel.green.status() == 4 == _jambel.BLINK_INVERSE
+    assert jambel.yellow.status() == 3 == _jambel.FLASH
+    assert jambel.red.status() == 2 == _jambel.BLINK
 
 
 def test_set_blink_time(jambel):

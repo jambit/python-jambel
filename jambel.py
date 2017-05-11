@@ -233,7 +233,7 @@ class Jambel(object):
             values = self._status_reg.search(result).group(1)
             codes = list(map(int, values.split(',')))[:3]
             return dict(zip(self._order, codes))
-        except (TypeError, ValueError):
+        except (AttributeError, TypeError, ValueError):
             raise TypeError('Could not parse jambel status %r!' % result)
 
     def set(self, status):
