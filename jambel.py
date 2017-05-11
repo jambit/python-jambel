@@ -4,6 +4,8 @@
 """
 Interface to jambit's project traffic lights.
 
+jambel.py ADDRESS [OPTIONS] COMMAND [COMMAND ...]
+
 COMMANDS:
 
   status       - Will return a list of status codes for the light modules as JSON.
@@ -16,11 +18,12 @@ COMMANDS:
 
 EXAMPLES:
 
-To remote control a Jambel, simply run this script::
+To remote control a Jambel, simply run one of these on the command line::
 
     jambel.py ampel3.dev.jambit.com --debug green=on yellow=blink red=off
     jambel.py ampel1.dev.jambit.com:10001 reset green=flash
-
+    
+Type jambel.py --help for more information.
 """
 
 import argparse
@@ -29,7 +32,7 @@ import logging
 import telnetlib
 import re
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 OFF = 0
 ON = 1

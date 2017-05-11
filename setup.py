@@ -2,17 +2,18 @@ from setuptools import setup
 import os
 import re
 
+
 def get_version():
-	"""
-	Extracts version directly from Jambel module.
-	"""
-	version_reg = re.compile("""^__version__ = '(.*)'""", re.M)
-	_here = os.path.dirname(os.path.abspath(__file__))
-	path = os.path.join(_here, 'jambel.py')	
-	m = version_reg.search(open(path).read())
-	return m.group(1) if m is not None else '?'
-	
-	
+    """
+    Extracts version directly from Jambel module.
+    """
+    version_reg = re.compile("""^__version__ = '(.*)'""", re.M)
+    _here = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(_here, 'jambel.py')
+    m = version_reg.search(open(path).read())
+    return m.group(1) if m is not None else '?'
+
+
 setup(
     name='jambel',
     version=get_version(),
