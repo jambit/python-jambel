@@ -22,9 +22,9 @@ setup(
     license='MIT',
     author='Sebastian Rahlf',
     author_email='sebastian.rahlf@jambit.com',
-    description="Interface to jambit's project traffic lights.",
+    description="Interface to jambit's fast feedback lights.",
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.rst')).read(),
-    tests_require=['pytest'],
+    tests_require=['pytest', 'pyserial==3.4'],
     entry_points={
         'console_scripts': [
             'jambel = jambel:main',

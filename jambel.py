@@ -32,6 +32,12 @@ import logging
 import telnetlib
 import re
 
+try:
+    import serial
+    SERIAL_SUPPORT = True
+except ImportError:  # pragma: no cover
+    SERIAL_SUPPORT = False
+
 __version__ = '0.1.2'
 
 OFF = 0
@@ -266,6 +272,34 @@ class Jambel(object):
     def _get_module_no(self, colour):
         """Returns number of light module"""
         return self._order.index(colour) + 1
+
+
+class SerialJambel(Jambel):
+
+    """
+    Jambel connected via USB.
+    """
+
+    DEFAULT_BAUD_RATE = 9600
+
+    def __init__(self, dev='/dev/ttyUSB0'):
+        Jambel.__init__(self, None)
+        self.port = dev
+        if not SERIAL_SUPPORT:
+            raise RuntimeError('You need to install package pyserial for this to work!')
+
+    def __repr__(self):  # pragma: no cover
+        return '<%s at %s>' % (self.__class__.__name__, self.port)
+
+    def _send(self, cmd):
+        value = ('%s\n' % cmd).encode('utf-8')
+        self._logger.debug('Send command %r.' % value)
+        conn = serial.Serial(self.port, self.DEFAULT_BAUD_RATE)
+        conn.write(cmd)
+        response = conn.readline().decode('utf-8')
+        self._logger.debug('Received response %r.' % response)
+        conn.close()
+        return response
 
 
 def main(args=None):

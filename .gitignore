@@ -1,6 +1,13 @@
-sandbox
+sandbox/
 .idea/
 .tox/
 __pycache__/
 *.pyc
 *.pyo
+dist/
+build/
+htmlcov/
+*.egg/
+*.egg-info/
+.coverage
+*.py~

@@ -1,7 +1,7 @@
-
 import telnetlib
 
 import pytest
+import serial
 
 import jambel as _jambel
 
@@ -9,8 +9,8 @@ import jambel as _jambel
 class TelnetMock(object):
 
     """
-    Class mocking the most relevant methods of :class:`telnetlib.Telnet`. Interactions are reported back to the
-    a :class:`MockConnectionFactory` instance for later reference.
+    Class mocking the most relevant methods of :class:`telnetlib.Telnet` and :class:`serial.Serial`. Interactions
+    are reported back to the a :class:`MockConnectionFactory` instance for later reference.
     """
 
     def __init__(self, mock):
@@ -21,6 +21,11 @@ class TelnetMock(object):
         self.mock.last_cmd = cmd
 
     def read_until(self, *args, **kwargs):
+        """Mocks :meth:`~telnetlib.Telnet.read_until`."""
+        return self.mock.response
+
+    def readline(self, *args, **kwargs):
+        """Mocks :meth:`~serial.Serial.readline`."""
         return self.mock.response
 
     def close(self):
@@ -76,10 +81,26 @@ def mock_telnet(monkeypatch):
     monkeypatch.setattr(telnetlib, 'Telnet', mock)
     return mock
 
+
 @pytest.fixture(scope='function')
 def jambel(mock_telnet):
     light = _jambel.Jambel('my.host')
     light.__connection = mock_telnet
+    return light
+
+
+@pytest.fixture(scope='function', autouse=True)
+def mock_serial(monkeypatch):
+    mock = MockConnectionFactory()
+    mock.response = 'OK\r\n'  # standard response
+    monkeypatch.setattr(serial, 'Serial', mock)
+    return mock
+
+
+@pytest.fixture(scope='function')
+def usbjambel(mock_serial):
+    light = _jambel.SerialJambel()
+    light.__connection = mock_serial
     return light
 
 
@@ -120,6 +141,7 @@ def test_status_parsing_incomplete_response_fails(jambel):
     jambel.__connection.response = ',0,0\r\n'
     with pytest.raises(TypeError):
         jambel.status()
+
 
 def test_status_for_individual_lights(jambel):
     jambel.__connection.response = 'status=2,3,4,1\r\n'
@@ -180,6 +202,7 @@ def test_init_jambel_modules_bottom_up():
     jambel = _jambel.Jambel('my.host', green=_jambel.BOTTOM)
     assert jambel._order == [_jambel.GREEN, _jambel.YELLOW, _jambel.RED]
 
+
 def test_init_jambel_modules_top_down():
     jambel = _jambel.Jambel('my.host', green=_jambel.TOP)
     assert jambel._order == [_jambel.RED, _jambel.YELLOW, _jambel.GREEN]
@@ -205,10 +228,10 @@ def test_main_jambel_address(mock_telnet, input, output):
 @pytest.mark.parametrize('input', [
     '',
     'my.host:',
-    'my.host:bork', 
+    'my.host:bork',
     'my.host:bork:',
     ':1025',
-    ':bork', 
+    ':bork',
 ])
 def test_main_jambel_address_fails_for_wrong_format(input):
     pytest.raises(SystemExit, _jambel.main, [input, 'version'])
@@ -217,11 +240,11 @@ def test_main_jambel_address_fails_for_wrong_format(input):
 @pytest.mark.cli
 @pytest.mark.parametrize('input,output', [
     (['version'], 'version'),
-    (['red=on'],      'set=1,on'),
-    (['yellow=off'],  'set=2,off'),
+    (['red=on'], 'set=1,on'),
+    (['yellow=off'], 'set=2,off'),
     (['green=blink'], 'set=3,blink'),
-    (['red=off', '--red-on-top'],             'set=3,off'),
-    (['yellow=flash', '--red-on-top'],        'set=2,flash'),
+    (['red=off', '--red-on-top'], 'set=3,off'),
+    (['yellow=flash', '--red-on-top'], 'set=2,flash'),
     (['green=blink_inverse', '--red-on-top'], 'set=1,blink_invers'),
 ])
 def test_main_commands(mock_telnet, input, output):
@@ -258,4 +281,13 @@ def test_context_processor_does_not_swallow_exceptions(jambel):
         with jambel as j:
             raise RuntimeError
 
+
+def test_usb_connection_fails_for_missing_package_pyserial(monkeypatch):
+    monkeypatch.setattr(_jambel, 'SERIAL_SUPPORT', False)
+    with pytest.raises(RuntimeError):
+        _jambel.SerialJambel()
+
+def test_serial_jambel(usbjambel):
+    usbjambel.version()
+    assert usbjambel.__connection.last_cmd == 'version'
 
