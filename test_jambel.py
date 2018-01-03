@@ -121,12 +121,23 @@ def test_status_parsing_incomplete_response_fails(jambel):
     with pytest.raises(TypeError):
         jambel.status()
 
+
 def test_status_for_individual_lights(jambel):
     jambel.__connection.response = 'status=2,3,4,1\r\n'
     assert jambel._order == [_jambel.RED, _jambel.YELLOW, _jambel.GREEN]
     assert jambel.green.status() == 4 == _jambel.BLINK_INVERSE
     assert jambel.yellow.status() == 3 == _jambel.FLASH
     assert jambel.red.status() == 2 == _jambel.BLINK
+
+
+def test_on_with_duration(jambel):
+    jambel.red.on(1000)
+    assert jambel.__connection.last_cmd == 'set=1,1000\n'
+
+
+def test_on_with_duration_fails_for_invalid_value(jambel):
+    with pytest.raises(ValueError):
+        jambel.red.on(65001)
 
 
 def test_set_blink_time(jambel):
