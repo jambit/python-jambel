@@ -24,11 +24,14 @@ setup(
     author_email='sebastian.rahlf@jambit.com',
     description="Interface to jambit's fast feedback lights.",
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.rst')).read(),
-    tests_require=[
-        'pytest', 
-        'pytest-cov', 
-        'pyserial',
-    ],
+    extras_require={
+        # https://stackoverflow.com/a/32513360/294082
+        'testing': [
+            'pytest',
+            'pytest-cov',
+            'pyserial',
+        ]
+    },
     entry_points={
         'console_scripts': [
             'jambel = jambel:main',
@@ -41,12 +44,11 @@ setup(
         'License :: Other/Proprietary License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ]
 )
