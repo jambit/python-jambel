@@ -24,7 +24,11 @@ setup(
     author_email='sebastian.rahlf@jambit.com',
     description="Interface to jambit's fast feedback lights.",
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.rst')).read(),
-    tests_require=['pytest', 'pyserial==3.4'],
+    tests_require=[
+        'pytest', 
+        'pytest-cov', 
+        'pyserial',
+    ],
     entry_points={
         'console_scripts': [
             'jambel = jambel:main',
